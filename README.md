@@ -1,9 +1,9 @@
 # Lingui + Next.js App Router — Production-Readiness Architecture Review
 
-**Review date:** 2026-03-10
+**Review date:** 2026-03-11
 **Stack:** Next.js 16.1.6 · React 19.2.3 · @lingui/core 5.9.2 · @lingui/swc-plugin 5.11.0 · Tailwind 4 · TypeScript 5
-**Rendering strategy:** All routes fully static (SSG) via `generateStaticParams`
-**Locale count:** 2 (en, es) · **String count:** 10 per locale · **All translations complete**
+**Rendering strategy:** Dynamic rendering (`force-dynamic`) — all routes rendered on every request
+**Locale count:** 2 (en, es) · **String count:** 12 per locale · **All translations complete**
 
 ---
 
@@ -11,16 +11,11 @@
 
 ### Routing & Locale Segments
 
-The app uses a single `[lang]` dynamic segment under `src/app/[lang]/` to partition all localized content. Two leaf pages exist (`page.tsx` and `hellotesting/page.tsx`), along with a translated 404 page (`not-found.tsx`) and a translated error boundary (`error.tsx`). The root layout at `src/app/layout.tsx` sits outside the `[lang]` segment — it owns `<html>`, `<body>`, fonts, global CSS, and static metadata. It calls no dynamic APIs, which preserves full SSG across the entire app.
+The app uses a single `[lang]` dynamic segment under `src/app/[lang]/` to partition all localized content. Two leaf pages exist (`page.tsx` and `hellotesting/page.tsx`), along with a translated 404 page (`not-found.tsx`) and a translated error boundary (`error.tsx`).
 
-`generateStaticParams` in `src/app/[lang]/layout.tsx` reads from `lingui.config.ts` to emit one static build per supported locale. The build output confirms every route is prerendered:
+The root layout at `src/app/layout.tsx` is a pass-through — it owns only global CSS imports and static `<Metadata>`. It returns `{children}` directly without wrapping in `<html>` or `<body>`. The `<html>` and `<body>` elements live in `src/app/[lang]/layout.tsx`, which has access to the `lang` parameter and renders `<html lang={lang}>` — giving every locale an accurate document language attribute.
 
-```
-Route (app)
-├ ○ /_not-found
-├ ● /[lang]              → /en, /es
-└ ● /[lang]/hellotesting → /en/hellotesting, /es/hellotesting
-```
+`src/app/[lang]/layout.tsx` declares `export const dynamic = "force-dynamic"`, which forces all routes under the `[lang]` subtree to render dynamically on every request. No `generateStaticParams` is present — the app relies entirely on server-side rendering rather than build-time prerendering.
 
 ### Locale Resolution
 
@@ -34,11 +29,11 @@ The resolved locale is used to redirect the user to the correct prefixed URL (e.
 
 ### Invalid Locale Handling
 
-Two layers of validation prevent unsupported locales from rendering:
+Three layers of validation prevent unsupported locales from rendering:
 
-- **Middleware layer:** Any pathname whose first segment looks like a locale (`/^[a-z]{2}(-[a-z]{2})?$/i`) but isn't in the whitelist gets stripped and redirected. For example, `/fr/about` → `/en/about` (assuming English is the resolved preference). This prevents nested-junk URLs like `/en/fr/about`.
-- **Layout layer:** `src/app/[lang]/layout.tsx` calls `getAllLocales().includes(lang)` and triggers `notFound()` for any locale that somehow bypasses middleware (direct server-side navigation, cached route manifests, etc.).
-- **Catalog loader layer:** `getI18nInstance()` in `src/lib/i18n.ts` validates the locale parameter against the config whitelist before any `import()` call. Invalid locales fall back to `"en"` with a `console.warn`. This is defense-in-depth — it should never be reached in normal operation.
+- **Middleware layer** (`src/middleware.ts`, lines 47–52): Any pathname whose first segment matches `/^[a-z]{2}(-[a-z]{2})?$/i` but isn't in the whitelist gets stripped and redirected. For example, `/fr/about` → `/en/about` (assuming English is the resolved preference). This prevents nested-junk URLs like `/en/fr/about`.
+- **Layout layer** (`src/app/[lang]/layout.tsx`, line 36): `getAllLocales().includes(lang)` is checked and `notFound()` is triggered for any locale that somehow bypasses middleware (direct server-side navigation, cached route manifests, etc.).
+- **Catalog loader layer** (`src/lib/i18n.ts`, lines 34–37): `getI18nInstance()` validates the locale parameter against the config whitelist before any `import()` call. Invalid locales fall back to `"en"` with a `console.warn`. This is defense-in-depth — it should never be reached in normal operation.
 
 ### Translation Catalog Loading
 
@@ -48,17 +43,27 @@ The compiled catalog files (`src/locales/en.ts`, `src/locales/es.ts`) use `JSON.
 
 ### Server-Side i18n
 
-Every Server Component page calls `getI18nInstance(lang)` then `setI18n(i18n)` from `@lingui/react/server`. This is required because Lingui's RSC integration stores the i18n instance in an async-local-storage-like scope — each Server Component execution context needs its own `setI18n` call. The `[lang]/layout.tsx` calls `setI18n` for layout-level rendering, and each page calls it again for page-level rendering. `<Trans>` from `@lingui/react/macro` is then used for translatable strings.
+The `[lang]/layout.tsx` calls `getI18nInstance(lang)` followed by `setI18n(i18n)` to establish the i18n context for layout-level `<Trans>` usage. Each page uses the `activateI18n()` convenience helper from `src/lib/i18n.ts`, which combines both calls into one:
+
+```ts
+await activateI18n((await params).lang);
+```
+
+This is required because Lingui's RSC integration stores the i18n instance in a `React.cache`-based scope — each Server Component execution context needs its own `setI18n` call. The layout's call does not propagate to child page components. `<Trans>` from `@lingui/react/macro` is used for all translatable strings in Server Components.
 
 ### Client-Side i18n
 
 `src/components/LinguiClientProvider.tsx` wraps children with Lingui's `I18nProvider`. It receives `initialLocale` and `initialMessages` as serialized props from the server layout, then constructs a client-side `I18n` instance via `useMemo`. The memo is keyed on both `initialLocale` and `initialMessages`, so the instance rebuilds when the user switches languages — no stale state persists across locale changes.
 
-Client components (`not-found.tsx`, `error.tsx`) inherit i18n context from this provider without needing their own setup. They use `<Trans>` from `@lingui/react/macro` directly.
+Client components (`not-found.tsx`, `error.tsx`, `AdditionalTextToggle.tsx`) inherit i18n context from this provider without needing their own setup. They use `<Trans>` from `@lingui/react/macro` directly.
 
 ### Language Switching
 
-`src/components/LanguageSwitcher.tsx` renders a `<select>` dropdown populated from `lingui.config.ts`. On change, it reads the current pathname via `usePathname()`, swaps the first path segment (the locale), and calls `router.push()` with the new path. This triggers a server-side re-render that loads the new locale's layout, which in turn passes the new messages to `LinguiClientProvider`.
+`src/components/LanguageSwitcher.tsx` renders a `<select>` dropdown populated from `lingui.config.ts`. On change, it reads the current pathname via `usePathname()`, swaps the first path segment (the locale), reads `window.location.search` and `window.location.hash` to preserve query parameters and hash fragments, and calls `router.push()` with the full reconstructed URL. This triggers a server-side re-render that loads the new locale's layout, which passes updated messages to `LinguiClientProvider`.
+
+### Locale-Aware Links
+
+`src/components/LocaleLink.tsx` is a `"use client"` wrapper around Next.js `<Link>` that automatically prefixes the `href` with the current locale extracted from `usePathname()`. Pages use `<LocaleLink href="/hellotesting">` instead of manually interpolating `/${lang}/hellotesting`, preventing broken links when the prefix is forgotten.
 
 ### Middleware
 
@@ -71,159 +76,162 @@ Client components (`not-found.tsx`, `error.tsx`) inherit i18n context from this 
 
 ### Build Tooling
 
-`@lingui/swc-plugin` handles compile-time transformation of `<Trans>` macros into runtime calls. The `package.json` includes `lingui:extract` and `lingui:compile` scripts for the catalog workflow. `lingui.config.ts` defines a single catalog covering all of `src/`.
+`@lingui/swc-plugin` handles compile-time transformation of `<Trans>` macros into runtime calls. The `package.json` includes `lingui:extract`, `lingui:compile`, and `lingui:verify` scripts for the catalog workflow. `lingui.config.ts` defines a single catalog covering all of `src/`.
 
 ---
 
-## 2. Critical Issues — None Found
+## 2. Critical Issues
 
-No high-severity blockers exist. The architecture correctly handles:
+### 2.1 `force-dynamic` eliminates static generation — every request hits the server
 
-- Locale routing with `[lang]` segments and `generateStaticParams`
-- Dual-layer validation (middleware + layout `notFound()`)
-- Lazy catalog loading with caching and `server-only` guard
-- Server and client i18n context separation
-- Translated error boundaries and 404 pages
-- Full SSG with no dynamic rendering forced
-- Cookie-based locale persistence
-- Safe dynamic imports with validated locale parameters
+**Affected file:** `src/app/[lang]/layout.tsx` (line 7)
+
+```ts
+export const dynamic = "force-dynamic";
+```
+
+This directive forces every route under `[lang]` to render dynamically on every request. No page is prerendered at build time — Next.js cannot serve static HTML from the CDN edge. Every visitor hits the Node.js server, which must execute the full React render pipeline for every page load.
+
+**Impact:** For a 2-locale, 12-string demo this is imperceptible. In production with real traffic, this is the single most consequential architectural choice in the codebase:
+
+- **TTFB increases** — CDN cannot serve cached HTML; every request waits for server rendering.
+- **Server cost scales linearly** with traffic — no build-time amortization of render work.
+- **No ISR option** — `force-dynamic` overrides `revalidate` settings, preventing incremental static regeneration as a middle ground.
+
+**Why it might be here:** Moving `<html>` and `<body>` into the `[lang]` layout (to render `<html lang={lang}>` dynamically) may have required this flag during development. However, `<html lang={lang}>` in a layout that uses `params` does not inherently require `force-dynamic` — Next.js can still statically generate routes with `generateStaticParams` and a dynamic segment param.
+
+**Recommended fix:** Remove `force-dynamic` and restore `generateStaticParams`:
+
+```tsx
+// src/app/[lang]/layout.tsx
+import linguiConfig from "../../../lingui.config";
+
+export function generateStaticParams() {
+  return linguiConfig.locales.map((lang) => ({ lang }));
+}
+```
+
+This tells Next.js to prerender every route for each locale at build time — restoring full SSG with zero TTFB from the CDN edge. The `<html lang={lang}>` attribute will be baked into each prerendered HTML file with the correct value. If certain routes need dynamic data in the future, use per-route `revalidate` or `dynamic` overrides instead of a layout-level blanket.
+
+### 2.2 `not-found.tsx` links to `/` instead of a locale-prefixed path
+
+**Affected file:** `src/app/[lang]/not-found.tsx` (line 17)
+
+```tsx
+<Link href="/">
+```
+
+The "Back to Home" link navigates to `/`, which triggers a middleware redirect to the user's preferred locale. This works, but it causes an unnecessary round trip (302 redirect) and breaks the client-side navigation model — Next.js performs a full page navigation instead of an SPA transition.
+
+**Recommended fix:** Use `LocaleLink` instead:
+
+```tsx
+import { LocaleLink } from "@/components/LocaleLink";
+
+<LocaleLink href="/">
+  <Trans>Back to Home</Trans>
+</LocaleLink>
+```
+
+This preserves client-side navigation and avoids the redirect.
 
 ---
 
 ## 3. Medium Risks
 
-### 3.1 `setI18n()` boilerplate in every Server Component page
-
-**Affected files:** `src/app/[lang]/page.tsx`, `src/app/[lang]/hellotesting/page.tsx`
-
-Every page must repeat this three-line sequence:
-
-```ts
-const { lang } = await params;
-const i18n = await getI18nInstance(lang);
-setI18n(i18n);
-```
-
-Lingui requires `setI18n` in the same Server Component execution scope that uses `<Trans>`. The layout's `setI18n` call does not propagate to child page components during static generation. Omitting it causes a build-time error (`"i18n instance for RSC hasn't been setup"`), which is a safe failure mode — but easy to overlook during code review as the codebase grows.
-
-**Recommended fix:** Add a convenience wrapper to `src/lib/i18n.ts`:
-
-```ts
-import { setI18n } from "@lingui/react/server";
-
-export async function activateI18n(lang: string) {
-  const i18n = await getI18nInstance(lang);
-  setI18n(i18n);
-  return { lang, i18n };
-}
-```
-
-Pages then become a single call:
-
-```tsx
-export default async function Page({ params }: Props) {
-  const { lang } = await activateI18n((await params).lang);
-  // ...
-}
-```
-
-This reduces per-page boilerplate from three lines to one and eliminates the risk of forgetting `setI18n`.
-
-### 3.2 Hardcoded locale interpolation in Link hrefs
-
-**Affected files:** `src/app/[lang]/page.tsx` (line 32), `src/app/[lang]/hellotesting/page.tsx` (line 32)
-
-Every internal link manually constructs the locale prefix:
-
-```tsx
-<Link href={`/${lang}/hellotesting`}>
-```
-
-This works correctly but becomes fragile at scale. Forgetting the prefix on any link produces a broken route that middleware will redirect — adding an unnecessary round trip and breaking client-side navigation expectations.
-
-**Recommended fix:** Create a `LocaleLink` wrapper:
-
-```tsx
-// src/components/LocaleLink.tsx
-"use client";
-import Link, { type LinkProps } from "next/link";
-import { usePathname } from "next/navigation";
-
-type Props = Omit<LinkProps, "href"> & {
-  href: string;
-  children: React.ReactNode;
-  className?: string;
-};
-
-export function LocaleLink({ href, ...props }: Props) {
-  const pathname = usePathname();
-  const locale = pathname.split("/")[1];
-  const localizedHref = href.startsWith("/") ? `/${locale}${href}` : href;
-  return <Link href={localizedHref} {...props} />;
-}
-```
-
-Usage becomes `<LocaleLink href="/hellotesting">` — no manual interpolation needed.
-
-### 3.3 LanguageSwitcher drops query parameters and hash fragments
-
-**Affected file:** `src/components/LanguageSwitcher.tsx` (lines 17–21)
-
-`usePathname()` returns only the pathname portion of the URL. A URL like `/en/search?q=hello#results` becomes `/es/search` after switching — the query string and hash fragment are silently lost.
-
-**Current impact:** Low, because no existing routes use query parameters. But this becomes a real bug the moment search pages, filtered lists, or any query-param-dependent routes are added.
-
-**Recommended fix:**
-
-```tsx
-const switchLocale = (newLocale: string) => {
-  const newSegments = [...segments];
-  newSegments[1] = newLocale;
-  const newPath = newSegments.join("/");
-  const { search, hash } = window.location;
-  router.push(`${newPath}${search}${hash}`);
-};
-```
-
-### 3.4 No CI check for translation completeness
+### 3.1 No CI check for translation completeness
 
 **Affected files:** `src/locales/es.po`, `package.json`
 
-All 10 Spanish translations are currently complete, but there is no automated gate. A developer can add new `<Trans>` strings, run `lingui extract`, and ship the build without translating the new entries — the app will silently fall back to English source text for those strings.
+All 12 Spanish translations are currently complete, but while the `lingui:verify` script exists in `package.json`, there is no evidence it is wired into a CI pipeline. A developer can add new `<Trans>` strings, run `lingui extract`, and ship the build without translating the new entries — the app will silently fall back to English source text for those strings.
 
-**Recommended fix:** Add a verification script:
+**Recommended fix:** Run `npm run lingui:verify` as a CI step. The `--strict` flag in that script causes `lingui compile` to fail if any locale has empty `msgstr` entries, turning missing translations into a build-breaking error rather than a silent runtime fallback. Example GitHub Actions step:
 
-```json
-"scripts": {
-  "lingui:verify": "lingui extract --clean && lingui compile --typescript --strict"
-}
+```yaml
+- name: Verify translations
+  run: npm run lingui:verify
 ```
 
-Run `lingui:verify` in CI. The `--strict` flag causes `lingui compile` to fail if any locale has empty `msgstr` entries, turning missing translations into a build-breaking error rather than a silent runtime fallback.
+### 3.2 `LOCALE_LABELS` in LanguageSwitcher is maintained separately from `lingui.config.ts`
 
-### 3.5 `<html lang="en">` is a static default — imprecise for non-English locales
+**Affected file:** `src/components/LanguageSwitcher.tsx` (lines 6–9)
 
-**Affected file:** `src/app/layout.tsx` (line 26)
+```ts
+const LOCALE_LABELS: Record<string, string> = {
+  en: "English",
+  es: "Español",
+};
+```
 
-The root layout hardcodes `<html lang="en">`. When a user visits `/es/...`, the document root says `lang="en"` despite the page content being in Spanish.
+When a new locale is added to `lingui.config.ts`, the switcher will render the raw locale code (e.g. `"FR"`) via the fallback `locale.toUpperCase()` — not a human-readable label. This is a silent regression that produces a degraded but functional UI.
 
-**Impact:** Screen readers may announce the wrong language for the document root. Search engines primarily rely on content analysis, `hreflang` tags, and URL structure for language detection — not `<html lang>` alone — so SEO impact is minimal.
+**Recommended fix:** Either colocate the labels with the config:
 
-**Why it's this way:** The alternative — reading the locale from `headers()` or `params` in the root layout — forces Next.js to opt all routes into dynamic rendering, which eliminates CDN-edge caching and increases TTFB. The current choice prioritizes performance (full SSG) over `<html lang>` precision. This is an accepted tradeoff.
+```ts
+// lingui.config.ts
+export const localeLabels: Record<string, string> = {
+  en: "English",
+  es: "Español",
+};
+```
 
-**If you need accurate `<html lang>`:** Move the `<html>` element into `src/app/[lang]/layout.tsx` and remove it from the root layout. The root layout would return only `{children}`. The `[lang]` layout already has access to the locale parameter and could set `<html lang={lang}>` without calling any dynamic APIs. However, this changes the component tree structure and should be tested carefully against Next.js's layout nesting expectations.
+Or use `Intl.DisplayNames` for automatic locale-native labels:
+
+```ts
+const displayNames = new Intl.DisplayNames([locale], { type: "language" });
+const label = displayNames.of(locale); // "English", "español", etc.
+```
+
+### 3.3 Module-level `Map` caches in `i18n.ts` persist across requests in long-running servers
+
+**Affected file:** `src/lib/i18n.ts` (lines 12–13)
+
+```ts
+const catalogCache = new Map<string, Messages>();
+const instanceCache = new Map<string, I18n>();
+```
+
+With `force-dynamic`, the server process persists across requests. The `Map` caches grow with each new locale and never shrink. For 2 locales this is trivially small. However, if locales expand significantly or if multiple `I18n` instances are inadvertently created for the same locale through race conditions during concurrent requests, the cache could accumulate stale entries.
+
+**Current risk:** Negligible at this scale. This becomes relevant when locale count exceeds ~50 or when `I18n` instances hold large catalog data.
+
+**Recommended fix (future-proofing):** No immediate action needed. If locales grow, consider using `React.cache` per-request for instances (instead of module-level `Map`) to avoid cross-request state sharing in serverless environments where cold starts already clear module caches.
+
+### 3.4 No `<head>` alternate hreflang tags
+
+**Impact:** Search engines cannot discover alternate-language versions of a page from the HTML alone. Without `<link rel="alternate" hreflang="es" href="/es/..." />` tags, Google relies on sitemap cross-references or its own content analysis to associate locale variants.
+
+**Recommended fix:** Add hreflang tags via `generateMetadata` in `src/app/[lang]/layout.tsx`:
+
+```tsx
+import type { Metadata } from "next";
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { lang } = await params;
+  const allLocales = getAllLocales();
+  const alternates: Record<string, string> = {};
+  for (const locale of allLocales) {
+    alternates[locale] = `/${locale}`;
+  }
+  return {
+    alternates: {
+      languages: alternates,
+    },
+  };
+}
+```
 
 ---
 
 ## 4. Performance Assessment
 
-### 4.1 Static generation confirmed
+### 4.1 Dynamic rendering is the dominant performance concern
 
-All locale pages are prerendered at build time. No route forces dynamic rendering. TTFB from a CDN edge is effectively zero — the server delivers a static HTML file.
+With `force-dynamic`, every page request runs through the full React server render pipeline. There is no static HTML cache at the CDN edge. This is the single largest performance lever in the app — removing `force-dynamic` and restoring `generateStaticParams` would reduce TTFB to effectively zero for all locale-page combinations.
 
 ### 4.2 Catalog size is negligible
 
-`en.ts` is ~450 bytes. `es.ts` is ~500 bytes. The RSC payload overhead from serializing `initialMessages` into `LinguiClientProvider` props is minimal. At this scale, there is no measurable bundle impact.
+`en.ts` is ~500 bytes. `es.ts` is ~530 bytes. The RSC payload overhead from serializing `initialMessages` into `LinguiClientProvider` props is minimal. At this scale, there is no measurable bundle impact.
 
 **When to act:** If a single compiled catalog exceeds ~50 KB (roughly 2,000–3,000 strings), split catalogs by route in `lingui.config.ts`:
 
@@ -249,45 +257,35 @@ This gives each route only the strings it needs, reducing per-page RSC payload.
 
 The `server-only` guard on `src/lib/i18n.ts` prevents the server catalog loader from being bundled into client JavaScript. Client components receive pre-resolved messages as serialized props — they never import catalog files directly.
 
+### 4.6 Font loading runs on every request
+
+`Geist` and `Geist_Mono` are instantiated at the top of `src/app/[lang]/layout.tsx`. Under `force-dynamic`, these font-loading calls run on every request. Next.js caches the Google Fonts response internally, so the actual network overhead is minimal after the first request — but the function invocations are unnecessary repeated work. With SSG restored, font loading runs once at build time per locale.
+
 ---
 
 ## 5. Missing Components
 
-### 5.1 `<head>` alternate hreflang tags — Low severity
+### 5.1 `generateStaticParams` — Critical (see section 2.1)
 
-**Impact:** Search engines cannot discover alternate-language versions of a page from the HTML alone. Without `<link rel="alternate" hreflang="es" href="/es/..." />` tags, Google relies on sitemap cross-references or its own content analysis to associate locale variants.
+The absence of `generateStaticParams` combined with `force-dynamic` means no routes are prerendered. Restoring it is the highest-impact change for production readiness.
 
-**Recommended fix:** Add hreflang tags via `generateMetadata` in `src/app/[lang]/layout.tsx`:
+### 5.2 Dynamic route i18n example — Informational
+
+No `[slug]` or catch-all route exists yet. The current architecture would support it without changes: add a `[slug]` segment under `[lang]`, call `activateI18n` in the page, and extend `generateStaticParams` to emit locale × slug combinations. Not a gap — just an untested pattern in this codebase.
+
+### 5.3 RTL locale support — Informational
+
+Neither `en` nor `es` requires right-to-left text direction. If RTL locales (Arabic, Hebrew, etc.) are added in the future, the `<html dir>` attribute will need to be set dynamically. Since `<html>` already lives in the `[lang]` layout with access to `lang`, this would be a straightforward addition:
 
 ```tsx
-import type { Metadata } from "next";
+const RTL_LOCALES = new Set(["ar", "he", "fa", "ur"]);
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { lang } = await params;
-  const allLocales = getAllLocales();
-  const alternates: Record<string, string> = {};
-  for (const locale of allLocales) {
-    alternates[locale] = `/${locale}`;
-  }
-  return {
-    alternates: {
-      languages: alternates,
-    },
-  };
-}
+<html lang={lang} dir={RTL_LOCALES.has(lang) ? "rtl" : "ltr"}>
 ```
 
-### 5.2 LocaleLink wrapper component — Low severity
+### 5.4 Sitemap with locale alternates — Informational
 
-Discussed in section 3.2. Not a bug — just a DX improvement that prevents manual `/${lang}/...` interpolation from becoming a source of broken links at scale.
-
-### 5.3 Dynamic route i18n example — Informational
-
-No `[slug]` or catch-all route exists yet. The current architecture would support it without changes: add a `[slug]` segment under `[lang]`, call `setI18n` in the page, and extend `generateStaticParams` to emit locale × slug combinations. Not a gap — just an untested pattern in this codebase.
-
-### 5.4 RTL locale support — Informational
-
-Neither `en` nor `es` requires right-to-left text direction. If RTL locales (Arabic, Hebrew, etc.) are added in the future, the `<html dir>` attribute will need to be set dynamically. This would face the same SSG tradeoff as `<html lang>` (section 3.5).
+No `sitemap.ts` or `sitemap.xml` exists. For SEO, a sitemap that lists all locale variants of each page helps search engines discover and associate translated versions. Next.js supports dynamic sitemaps via `src/app/sitemap.ts`.
 
 ---
 
@@ -295,15 +293,15 @@ Neither `en` nor `es` requires right-to-left text direction. If RTL locales (Ara
 
 ### Cookie validation — Safe
 
-The `NEXT_LOCALE` cookie value is checked against the locale whitelist in `getRequestLocale()` (`src/middleware.ts`, line 56). An attacker setting `NEXT_LOCALE=../../etc/passwd` gets no match and falls through to `Accept-Language` negotiation. The cookie value never reaches a filesystem path or dynamic import without passing the whitelist check first.
+The `NEXT_LOCALE` cookie value is checked against the locale whitelist in `getRequestLocale()` (`src/middleware.ts`, line 73). An attacker setting `NEXT_LOCALE=../../etc/passwd` gets no match and falls through to `Accept-Language` negotiation. The cookie value never reaches a filesystem path or dynamic import without passing the whitelist check first.
 
 ### Dynamic import path injection — Safe
 
-`getI18nInstance()` validates the locale parameter against `locales.includes(locale)` before any `import()` call (`src/lib/i18n.ts`, line 23). An unsupported value is replaced with `"en"`. The `loadCatalog` function is module-private — it cannot be called directly from outside `i18n.ts`. Even if it were, the `import(`../locales/${locale}.ts`)` path is constrained to the `src/locales/` directory by the relative path prefix.
+`getI18nInstance()` validates the locale parameter against `locales.includes(locale)` before any `import()` call (`src/lib/i18n.ts`, line 34). An unsupported value is replaced with `"en"`. The `loadCatalog` function is module-private — it cannot be called directly from outside `i18n.ts`. Even if it were, the `import(`../locales/${locale}.ts`)` path is constrained to the `src/locales/` directory by the relative path prefix.
 
 ### Route-level validation — Safe
 
-`[lang]/layout.tsx` line 19 calls `notFound()` for unknown locale segments. Visiting `/xyz/anything` produces a proper 404 response — it does not render a page with an invalid locale.
+`[lang]/layout.tsx` line 36 calls `notFound()` for unknown locale segments. Visiting `/xyz/anything` produces a proper 404 response — it does not render a page with an invalid locale.
 
 ### Open redirect via locale prefix stripping — Safe
 
@@ -311,11 +309,15 @@ The middleware's locale-like prefix regex (`/^[a-z]{2}(-[a-z]{2})?$/i`) only mat
 
 ### x-locale header spoofing — No impact
 
-The middleware overwrites the `x-locale` header for valid-locale paths (line 19). The root layout does not read this header (it uses static `lang="en"`). Spoofing `x-locale` in an inbound request has zero effect on rendered output. The header remains in middleware for potential future use by API routes or edge functions.
+The middleware overwrites the `x-locale` header for valid-locale paths (line 28). No layout or page reads this header — the `[lang]` layout uses the URL parameter directly, and the root layout does not consume locale information at all. Spoofing `x-locale` in an inbound request has zero effect on rendered output. The header remains in middleware for potential future use by API routes or edge functions.
 
 ### Unsupported locale in URL — Safe
 
-Dual validation: middleware redirects to a known locale, and the layout `notFound()` catches any value that bypasses middleware. There is no code path where an unsupported locale reaches a `<Trans>` component or a catalog import.
+Triple-layer validation: middleware redirects to a known locale, the layout's `notFound()` catches any value that bypasses middleware, and the catalog loader falls back to `"en"` as final defense-in-depth. There is no code path where an unsupported locale reaches a `<Trans>` component or an unvalidated catalog import.
+
+### Query parameter preservation during language switch — Safe
+
+`LanguageSwitcher` reads `window.location.search` and `window.location.hash` and appends them to the new path. Query parameters and hash fragments survive locale changes.
 
 ---
 
@@ -323,47 +325,86 @@ Dual validation: middleware redirects to a known locale, and the layout `notFoun
 
 ```
 lingui-demo/
-├── lingui.config.ts             ← 2 locales (en, es), single catalog covering src/
-├── next.config.ts               ← @lingui/swc-plugin for macro transformation
-├── package.json                 ← lingui:extract + lingui:compile scripts
-├── tsconfig.json                ← @/* path alias → ./src/*
+├── lingui.config.ts                  ← 2 locales (en, es), single catalog covering src/
+├── next.config.ts                    ← @lingui/swc-plugin for macro transformation
+├── package.json                      ← lingui:extract + lingui:compile + lingui:verify scripts
+├── tsconfig.json                     ← @/* path alias → ./src/*
 └── src/
-    ├── middleware.ts             ← locale redirect, cookie persistence, Accept-Language fallback
+    ├── middleware.ts                  ← locale redirect, cookie persistence, Accept-Language fallback
     ├── app/
-    │   ├── layout.tsx           ← root: <html lang="en">, fonts, metadata (static, preserves SSG)
-    │   ├── globals.css          ← Tailwind + CSS custom properties
+    │   ├── layout.tsx                ← root: metadata + globals.css only, no <html>/<body>
+    │   ├── globals.css               ← Tailwind v4 imports
     │   └── [lang]/
-    │       ├── layout.tsx       ← validates locale → notFound(), setI18n(), LinguiClientProvider
-    │       ├── page.tsx         ← Home: setI18n() + <Trans> + LanguageSwitcher + Link
+    │       ├── layout.tsx            ← <html lang={lang}>, validates locale → notFound(),
+    │       │                            setI18n(), LinguiClientProvider, force-dynamic
+    │       ├── page.tsx              ← Home: activateI18n() + <Trans> + LanguageSwitcher + LocaleLink
     │       ├── hellotesting/
-    │       │   └── page.tsx     ← Hello Testing: setI18n() + <Trans> + LanguageSwitcher + Link
-    │       ├── not-found.tsx    ← "use client" translated 404, inherits i18n from provider
-    │       └── error.tsx        ← "use client" translated error boundary, inherits i18n from provider
+    │       │   └── page.tsx          ← Hello Testing: activateI18n() + <Trans> + LanguageSwitcher + LocaleLink
+    │       ├── not-found.tsx         ← "use client" translated 404, inherits i18n from provider
+    │       └── error.tsx             ← "use client" translated error boundary, inherits i18n from provider
     ├── components/
-    │   ├── LinguiClientProvider.tsx  ← useMemo-based I18nProvider, rebuilds on locale change
-    │   └── LanguageSwitcher.tsx      ← <select> dropdown, swaps [lang] path segment via router.push
+    │   ├── LinguiClientProvider.tsx   ← useMemo-based I18nProvider, rebuilds on locale change
+    │   ├── LanguageSwitcher.tsx       ← <select> dropdown, swaps [lang] segment, preserves query/hash
+    │   ├── LocaleLink.tsx            ← locale-aware <Link> wrapper, auto-prefixes href with current locale
+    │   └── AdditionalTextToggle.tsx  ← "use client" toggle with translated text, demonstrates client <Trans>
     ├── lib/
-    │   └── i18n.ts              ← "server-only"; lazy async getI18nInstance + getAllLocales + Map caches
+    │   └── i18n.ts                   ← "server-only"; getI18nInstance + activateI18n + getAllLocales + Map caches
     └── locales/
-        ├── en.po                ← source locale (10 strings)
-        ├── en.ts                ← compiled English catalog (~450 bytes)
-        ├── es.po                ← Spanish translations (10/10 complete)
-        └── es.ts                ← compiled Spanish catalog (~500 bytes)
+        ├── en.po                     ← source locale (12 strings)
+        ├── en.ts                     ← compiled English catalog (~500 bytes)
+        ├── es.po                     ← Spanish translations (12/12 complete)
+        └── es.ts                     ← compiled Spanish catalog (~530 bytes)
 ```
 
 ---
 
-## 8. Verdict
+## 8. Suggested Architecture & Fixes
 
-**The codebase is production-ready for Lingui-based localization.**
+### Priority 1: Restore static generation (Critical)
 
-The architecture correctly implements every critical concern: locale-segmented routing with `[lang]`, dual-layer locale validation, lazy-loaded and cached translation catalogs guarded by `server-only`, proper server/client i18n context separation, translated error boundaries and 404 pages, full SSG with no dynamic rendering forced, cookie-based locale persistence, and safe input validation at every layer.
+Remove `force-dynamic` from `src/app/[lang]/layout.tsx` and add `generateStaticParams`:
 
-Remaining items are low-severity enhancements that improve developer experience and future-proofing but do not block production deployment:
+```tsx
+// src/app/[lang]/layout.tsx — remove this line:
+// export const dynamic = "force-dynamic";
 
-- **`activateI18n` helper** — reduces per-page boilerplate from 3 lines to 1
-- **`LocaleLink` component** — eliminates manual `/${lang}/...` interpolation in links
-- **Query/hash preservation in switcher** — only matters once query-param routes exist
-- **`hreflang` tags** — improves SEO discoverability of locale variants
-- **CI translation completeness check** — prevents silent fallback to English for untranslated strings
-- **`<html lang>` precision** — accepted tradeoff in favor of full SSG performance
+// Add this:
+import linguiConfig from "../../../lingui.config";
+
+export function generateStaticParams() {
+  return linguiConfig.locales.map((lang) => ({ lang }));
+}
+```
+
+**Result:** Every locale × page combination is prerendered at build time. TTFB drops to zero from CDN. `<html lang={lang}>` is baked into each prerendered HTML file with the correct locale value. Server costs become proportional to build frequency, not traffic volume.
+
+### Priority 2: Fix `not-found.tsx` link (High)
+
+Replace the raw `<Link href="/">` with `<LocaleLink href="/">` to avoid the redirect round trip and maintain client-side navigation.
+
+### Priority 3: Add hreflang metadata (Medium)
+
+Add `generateMetadata` to `src/app/[lang]/layout.tsx` to emit `<link rel="alternate" hreflang>` tags for each supported locale. See section 3.4 for the implementation.
+
+### Priority 4: Wire `lingui:verify` into CI (Medium)
+
+Ensure `npm run lingui:verify` runs in the CI pipeline. The script already exists — it just needs to be called.
+
+### Priority 5: Colocate locale labels (Low)
+
+Move `LOCALE_LABELS` into `lingui.config.ts` or use `Intl.DisplayNames` to eliminate the maintenance gap between config and UI. See section 3.2.
+
+---
+
+## 9. Verdict
+
+**The codebase is architecturally sound for Lingui-based localization but has one critical production-readiness issue: `force-dynamic` eliminates static generation.**
+
+Everything else is correctly implemented: locale-segmented routing with `[lang]`, triple-layer locale validation (middleware → layout → catalog loader), lazy-loaded and cached translation catalogs guarded by `server-only`, proper server/client i18n context separation with `activateI18n`, translated error boundaries and 404 pages, accurate `<html lang={lang}>` per locale, cookie-based locale persistence, query/hash-preserving language switching, locale-aware `<LocaleLink>`, and safe input validation at every layer.
+
+Once `force-dynamic` is removed and `generateStaticParams` is restored, the app achieves full SSG with correct per-locale `<html lang>` attributes — the ideal production configuration. The remaining items are low-to-medium severity enhancements:
+
+- **hreflang tags** — improves SEO discoverability of locale variants
+- **CI translation gate** — prevents silent fallback to English for untranslated strings
+- **`not-found.tsx` link fix** — avoids unnecessary redirect on 404 "Back to Home"
+- **Colocated locale labels** — eliminates maintenance gap in language switcher
