@@ -13,7 +13,7 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
-#: src/app/[lang]/hellotesting/page.tsx:27
+#: src/app/[lang]/hellotesting/page.tsx:28
 #: src/app/[lang]/page.tsx:26
 msgid "Active locale:"
 msgstr "Idioma activo:"
@@ -26,7 +26,6 @@ msgstr "Texto adicional:"
 msgid "An unexpected error occurred."
 msgstr "Ocurrió un error inesperado."
 
-#: src/app/[lang]/hellotesting/page.tsx:35
 #: src/app/[lang]/not-found.tsx:20
 msgid "Back to Home"
 msgstr "Volver al Inicio"
@@ -35,7 +34,11 @@ msgstr "Volver al Inicio"
 msgid "Go to Hello Testing"
 msgstr "Ir a Hola Testing"
 
-#: src/app/[lang]/hellotesting/page.tsx:19
+#: src/app/[lang]/hellotesting/page.tsx:38
+msgid "Go to Redirect"
+msgstr "Ir a la redirección"
+
+#: src/app/[lang]/hellotesting/page.tsx:20
 msgid "Hello Testing"
 msgstr "Hola Testing"
 
@@ -47,6 +50,10 @@ msgstr "Hola Mundo"
 msgid "Page not found"
 msgstr "Página no encontrada"
 
+#: src/app/[lang]/hellotesting/ReturnHomeButton.tsx:15
+msgid "Return to Home"
+msgstr "Volver al inicio"
+
 #: src/app/[lang]/error.tsx:15
 msgid "Something went wrong"
 msgstr "Algo salió mal"
@@ -55,7 +62,7 @@ msgstr "Algo salió mal"
 msgid "This is additional text."
 msgstr "Este es texto adicional."
 
-#: src/app/[lang]/hellotesting/page.tsx:22
+#: src/app/[lang]/hellotesting/page.tsx:23
 #: src/app/[lang]/page.tsx:21
 msgid "This text is translated using LinguiJS in the Next.js App Router."
 msgstr "Este texto está traducido usando LinguiJS en el Next.js App Router."

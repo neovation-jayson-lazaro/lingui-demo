@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation";
 import { Geist, Geist_Mono } from "next/font/google";
 import { setI18n } from "@lingui/react/server";
-import { getI18nInstance, getAllLocales } from "@/lib/i18n";
+import { getI18nInstance, isLocale } from "@/lib/i18n";
 import { LinguiClientProvider } from "@/components/LinguiClientProvider";
-import linguiConfig from "../../../lingui.config";
+import { locales } from "../../../lingui.config";
 
 export function generateStaticParams() {
-  return linguiConfig.locales.map((lang) => ({ lang }));
+  return locales.map((lang) => ({ lang }));
 }
 
 const geistSans = Geist({
@@ -36,7 +36,7 @@ export default async function LangLayout({ params, children }: Props) {
   // Validate the locale from the URL against the whitelist. If the middleware
   // didn't catch an invalid locale (e.g. direct server navigation), this
   // triggers a proper 404 instead of rendering with a broken locale.
-  if (!getAllLocales().includes(lang)) notFound();
+  if (!isLocale(lang)) notFound();
 
   const i18n = await getI18nInstance(lang);
   setI18n(i18n);

@@ -3,14 +3,15 @@ import { activateI18n } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { LocaleLink } from "@/components/LocaleLink";
 import { AdditionalTextToggle } from "@/components/AdditionalTextToggle";
+import { ReturnHomeButton } from "./ReturnHomeButton";
 
 type Props = {
   params: Promise<{ lang: string }>;
 };
 
 export default async function HelloTesting({ params }: Props) {
-  // Required: activateI18n must be called in each page's Server Component
-  await activateI18n((await params).lang);
+  const { lang } = await params;
+  await activateI18n(lang);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
@@ -28,12 +29,15 @@ export default async function HelloTesting({ params }: Props) {
           <LanguageSwitcher />
         </p>
         <AdditionalTextToggle />
-        <LocaleLink
-          href="/"
-          className="rounded-full bg-zinc-900 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-        >
-          <Trans>Back to Home</Trans>
-        </LocaleLink>
+        <div className="flex flex-wrap gap-3">
+          <ReturnHomeButton />
+          <LocaleLink
+            href="/hellotesting/go-home"
+            className="rounded-full border border-zinc-300 bg-white px-6 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+          >
+            <Trans>Go to Redirect</Trans>
+          </LocaleLink>
+        </div>
       </main>
     </div>
   );
