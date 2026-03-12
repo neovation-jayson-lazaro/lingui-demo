@@ -1,5 +1,5 @@
-import type { Route } from "next";
-import { redirect } from "next/navigation";
+import { isLocale, localeRedirect } from "@/lib/i18n";
+import { notFound } from "next/navigation";
 
 type Props = {
   params: Promise<{ lang: string }>;
@@ -7,5 +7,6 @@ type Props = {
 
 export default async function GoHomePage({ params }: Props) {
   const { lang } = await params;
-  redirect(`/${lang}` as Route);
+  if (!isLocale(lang)) notFound();
+  localeRedirect(lang, "/");
 }

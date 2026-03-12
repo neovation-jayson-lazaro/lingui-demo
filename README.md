@@ -12,7 +12,7 @@
 
 # Lingui Patterns, Setup & CLI Guide
 
-This section is a developer guide covering how the app implements Lingui-based localization with the Next.js App Router. It explains the build pipeline, initialization patterns, navigation helpers, server-only utilities, middleware integration, static rendering safety, and CLI workflow — with code references to the actual files in this repository.
+This section is a developer guide covering how the app implements Lingui-based localization with the Next.js App Router. It explains the build pipeline, initialization patterns, navigation helpers, server-only utilities, proxy integration, static rendering safety, and CLI workflow — with code references to the actual files in this repository.
 
 ---
 
@@ -479,35 +479,46 @@ export function localeRedirect(lang: Locale, path: AppRoute): never {
 
 The function accepts typed `Locale` and `AppRoute` parameters — invalid locale strings or unknown routes are compile-time errors. Because it lives in a `"server-only"` module, it cannot be imported in client components. The return type is `never` — like `notFound()`, it throws internally and halts rendering.
 
-### Direct `redirect()` usage
+### Example: server-only redirect page
 
-The `go-home` page (`src/app/[lang]/hellotesting/go-home/page.tsx`) uses `redirect()` directly:
+The `go-home` page (`src/app/[lang]/hellotesting/go-home/page.tsx`) demonstrates `localeRedirect` in a page that exists solely to redirect:
 
 ```tsx
-import type { Route } from "next";
-import { redirect } from "next/navigation";
+import { isLocale, localeRedirect } from "@/lib/i18n";
+import { notFound } from "next/navigation";
+
+type Props = {
+  params: Promise<{ lang: string }>;
+};
 
 export default async function GoHomePage({ params }: Props) {
   const { lang } = await params;
-  redirect(`/${lang}` as Route);
+  if (!isLocale(lang)) notFound();
+  localeRedirect(lang, "/");
 }
 ```
 
-This is a server-only page that immediately redirects to the locale root. The `as Route` cast is safe because `/${lang}` matches the `[lang]` dynamic route.
+This page has three key properties that make the redirect safe and server-restricted:
+
+1. **`import "server-only"` enforcement** — `localeRedirect` lives in `src/lib/i18n.ts`, which imports `"server-only"` at the top. If a `"use client"` component tries to import it, the build fails immediately — no runtime surprises.
+2. **Typed parameters** — `lang` is narrowed to `Locale` via `isLocale()` before the call, and `"/"` satisfies `AppRoute`. Invalid locales or nonexistent routes are caught at compile time.
+3. **`never` return type** — TypeScript knows `localeRedirect` never returns. No code after the call is reachable, and no explicit `return` statement is needed.
+
+No `activateI18n` call is needed here because the page renders no translated content — it redirects before any JSX is returned.
 
 ### Redirect loop safety
 
-`localeRedirect(lang, path)` produces URLs like `/fr/login` which always have a valid locale prefix. The middleware recognizes valid locale prefixes and passes them through without redirecting. No redirect loop is possible between middleware and `localeRedirect`.
+`localeRedirect(lang, path)` produces URLs like `/fr/login` which always have a valid locale prefix. The proxy recognizes valid locale prefixes and passes them through without redirecting. No redirect loop is possible between the proxy and `localeRedirect`.
 
-The middleware only redirects when **no** valid locale prefix is found. Once a valid prefix exists, the request passes through unconditionally.
+The proxy only redirects when **no** valid locale prefix is found. Once a valid prefix exists, the request passes through unconditionally.
 
 ---
 
-## G6. Middleware Integration
+## G6. Proxy Integration
 
-### How middleware resolves the locale
+### How the proxy resolves the locale
 
-`src/middleware.ts` intercepts every page navigation and ensures it reaches a locale-prefixed URL. The resolution chain:
+`src/proxy.ts` intercepts every page navigation and ensures it reaches a locale-prefixed URL. The resolution chain:
 
 1. **URL prefix** — if the pathname starts with `/en/`, `/fr/`, `/es/`, or `/de/`, the request passes through. A `NEXT_LOCALE` cookie is set (1-year expiry) to remember the preference.
 2. **Cookie** — if no valid prefix is found, `getRequestLocale()` checks the `NEXT_LOCALE` cookie against the whitelist.
@@ -515,7 +526,7 @@ The middleware only redirects when **no** valid locale prefix is found. Once a v
 4. **Fallback** — the first locale in `lingui.config.ts` (English) is used as the ultimate default.
 
 ```ts
-// src/middleware.ts (resolution chain)
+// src/proxy.ts (resolution chain)
 function getRequestLocale(request: NextRequest): string {
   const cookieLocale = request.cookies.get(LOCALE_COOKIE)?.value;
   if (cookieLocale && (locales as readonly string[]).includes(cookieLocale)) {
@@ -533,7 +544,7 @@ function getRequestLocale(request: NextRequest): string {
 
 ### Invalid locale stripping
 
-If the URL contains a locale-like prefix that isn't supported (e.g. `/pt/about`), the middleware strips it before redirecting:
+If the URL contains a locale-like prefix that isn't supported (e.g. `/pt/about`), the proxy strips it before redirecting:
 
 ```ts
 const segments = pathname.split("/");
@@ -548,7 +559,7 @@ This prevents nested-junk URLs like `/en/pt/about`.
 
 ### Matcher
 
-The middleware matcher excludes API routes, static assets, and images — it only runs for page navigations:
+The proxy matcher excludes API routes, static assets, and images — it only runs for page navigations:
 
 ```ts
 export const config = {
@@ -562,7 +573,7 @@ export const config = {
 
 An invalid locale must pass through three layers before it could render:
 
-1. **Middleware** — redirects to a valid locale
+1. **Proxy** — redirects to a valid locale
 2. **Layout** — `if (!isLocale(lang)) notFound();`
 3. **Catalog loader** — `if (!(locales as readonly string[]).includes(locale))` falls back to `"en"` with a `console.warn`
 
@@ -728,7 +739,7 @@ const LOCALE_LABELS: Record<string, string> = {
 };
 ```
 
-No changes are needed in middleware, layouts, or the catalog loader — they all read from `lingui.config.ts` dynamically.
+No changes are needed in the proxy, layouts, or the catalog loader — they all read from `lingui.config.ts` dynamically.
 
 ### Adding a new page
 
@@ -894,12 +905,13 @@ localeRedirect(lang, "/"); // → redirect("/fr") when lang is "fr"
 **Server-only redirect page** — `src/app/[lang]/hellotesting/go-home/page.tsx`
 
 ```tsx
-import type { Route } from "next";
-import { redirect } from "next/navigation";
+import { isLocale, localeRedirect } from "@/lib/i18n";
+import { notFound } from "next/navigation";
 
 export default async function GoHomePage({ params }: Props) {
   const { lang } = await params;
-  redirect(`/${lang}` as Route);
+  if (!isLocale(lang)) notFound();
+  localeRedirect(lang, "/");
 }
 ```
 
@@ -964,15 +976,15 @@ export type AppRoute = (typeof appRoutes)[number];
 
 All navigation helpers accept `AppRoute` as their path parameter. This provides compile-time route validation at the application level — developers cannot pass a nonexistent route to `LocaleLink`, `useLocaleRouter`, or `localeRedirect` without a TypeScript error.
 
-The `as Route` cast appears in four files that bridge between `AppRoute` and the Next.js `Route` type: `LocaleLink.tsx`, `LanguageSwitcher.tsx`, `locale-hooks.ts`, and `i18n.ts`. The cast is safe because the `[lang]` dynamic segment makes `/${locale}${suffix}` match the `DynamicRoute` pattern. No page or application component constructs locale-prefixed paths directly.
+The `as Route` cast appears in four files that bridge between `AppRoute` and the Next.js `Route` type: `LocaleLink.tsx`, `LanguageSwitcher.tsx`, `locale-hooks.ts`, and `i18n.ts`. The cast is safe because the `[lang]` dynamic segment makes `/${locale}${suffix}` match the `DynamicRoute` pattern. No page or application component constructs locale-prefixed paths directly — they all go through these primitives using typed `AppRoute` or `Locale` values.
 
-The `go-home/page.tsx` uses `redirect(`/${lang}` as Route)` directly — this is a server-only page that immediately redirects, so the cast is appropriate and narrowly scoped.
+The `go-home/page.tsx` uses `localeRedirect(lang, "/")` — the typed server-only redirect utility. No `as Route` cast is needed in the page itself; it's encapsulated inside `localeRedirect`.
 
 ### Locale Resolution
 
-Locale resolution follows a three-tier priority chain inside `src/middleware.ts`:
+Locale resolution follows a three-tier priority chain inside `src/proxy.ts`:
 
-1. **URL prefix** — If the pathname starts with a known locale (`/en/...`, `/fr/...`, `/es/...`, `/de/...`), the request passes through. The middleware sets a `NEXT_LOCALE` cookie (1-year expiry, `sameSite: lax`) and injects an `x-locale` request header for potential downstream use.
+1. **URL prefix** — If the pathname starts with a known locale (`/en/...`, `/fr/...`, `/es/...`, `/de/...`), the request passes through. The proxy sets a `NEXT_LOCALE` cookie (1-year expiry, `sameSite: lax`) and injects an `x-locale` request header for potential downstream use.
 2. **Cookie** — If the URL has no valid locale prefix, `getRequestLocale()` checks the `NEXT_LOCALE` cookie against the whitelist.
 3. **Accept-Language** — If no cookie exists, the `negotiator` library matches the browser's `Accept-Language` header against supported locales.
 
@@ -982,8 +994,8 @@ The resolved locale is used to redirect the user to the correct prefixed URL (e.
 
 Three layers of validation prevent unsupported locales from rendering:
 
-- **Middleware layer** (`src/middleware.ts`, lines 46–51): Any pathname whose first segment matches `/^[a-z]{2}(-[a-z]{2})?$/i` but isn't in the whitelist gets stripped and redirected. For example, `/pt/about` → `/en/about` (assuming English is the resolved preference). This prevents nested-junk URLs like `/en/pt/about`.
-- **Layout layer** (`src/app/[lang]/layout.tsx`, line 39): `isLocale(lang)` type guard is checked and `notFound()` is triggered for any locale that somehow bypasses middleware (direct server-side navigation, cached route manifests, etc.).
+- **Proxy layer** (`src/proxy.ts`, lines 46–51): Any pathname whose first segment matches `/^[a-z]{2}(-[a-z]{2})?$/i` but isn't in the whitelist gets stripped and redirected. For example, `/pt/about` → `/en/about` (assuming English is the resolved preference). This prevents nested-junk URLs like `/en/pt/about`.
+- **Layout layer** (`src/app/[lang]/layout.tsx`, line 39): `isLocale(lang)` type guard is checked and `notFound()` is triggered for any locale that somehow bypasses the proxy (direct server-side navigation, cached route manifests, etc.).
 - **Catalog loader layer** (`src/lib/i18n.ts`, lines 33–37): `getI18nInstance()` validates the locale parameter against the config whitelist before any `import()` call. Invalid locales fall back to `"en"` with a `console.warn`. This is defense-in-depth — it should never be reached in normal operation.
 
 ### Translation Catalog Loading
@@ -1035,18 +1047,18 @@ Both hooks are `"use client"` — they cannot be used in Server Components. The 
 
 `src/lib/i18n.ts` exports `localeRedirect(lang, path)` which accepts typed `Locale` and `AppRoute` parameters and calls `redirect()` from `next/navigation` with the locale prefix prepended. This is the server-side counterpart to the client-side `useLocaleRouter().push()`. Since it lives in a `"server-only"` module, it cannot be accidentally used in client components. The function's return type is `never` — it throws internally like `notFound()`.
 
-The `go-home` page demonstrates direct `redirect()` usage in a server-only context — a page that exists solely to perform a locale-prefixed redirect.
+The `go-home` page demonstrates `localeRedirect` usage — a page that exists solely to perform a typed, server-only, locale-prefixed redirect. It validates the locale with `isLocale()` before calling `localeRedirect`, so both parameters are fully typed at the call site.
 
 ### Middleware
 
-`src/middleware.ts` uses the `middleware` file convention and handles all locale routing concerns:
+`src/proxy.ts` uses the Next.js 16 `proxy` file convention (replacing the deprecated `middleware` convention) and handles all locale routing concerns:
 
 - Locale-prefixed requests pass through with cookie persistence and header injection.
 - Bare URLs (`/`, `/about`) get redirected to the preferred-locale-prefixed version.
 - Unknown locale-like prefixes (`/pt/...` when `pt` is not supported) get stripped and redirected.
 - The matcher excludes `/api`, `_next/static`, `_next/image`, `favicon.ico`, and common image extensions.
 
-No redirect loops are possible: the middleware only redirects when no valid locale prefix is found. Once a valid prefix is present, the request passes through unconditionally. The `localeRedirect` server function and the `go-home` page both redirect to locale-prefixed paths, which the middleware recognizes and passes through — no loop.
+No redirect loops are possible: the proxy only redirects when no valid locale prefix is found. Once a valid prefix is present, the request passes through unconditionally. The `localeRedirect` server function and the `go-home` page both redirect to locale-prefixed paths, which the proxy recognizes and passes through — no loop.
 
 ### Build Configuration
 
@@ -1080,7 +1092,7 @@ No high-severity blockers exist. The architecture correctly handles:
 
 - Locale routing with `[lang]` segments and `generateStaticParams` for full SSG across 4 locales
 - Accurate `<html lang={lang}>` per locale without forcing dynamic rendering
-- Triple-layer locale validation (middleware → layout `notFound()` → catalog loader fallback)
+- Triple-layer locale validation (proxy → layout `notFound()` → catalog loader fallback)
 - Lazy catalog loading with immutable `Messages` cached at module level and mutable `I18n` instances scoped per-request via `React.cache`
 - `server-only` guard preventing catalog loader from leaking into client bundles
 - Server and client i18n context separation (`setI18n`/`React.cache` for RSC, `I18nProvider`/React context for client)
@@ -1092,10 +1104,10 @@ No high-severity blockers exist. The architecture correctly handles:
 - Language switching via navigation (not runtime locale swap) — prevents stale server content
 - Two-layer route typing: `AppRoute` union for application-level safety, `as Route` casts narrowly scoped in navigation primitives for Next.js compatibility
 - Safe dynamic imports with validated locale parameters at every layer
-- Server-only redirect page (`go-home`) demonstrating locale-aware redirect without Lingui initialization (no `<Trans>` needed)
+- Server-only redirect page (`go-home`) using typed `localeRedirect(lang, "/")` without Lingui initialization (no `<Trans>` needed)
 - React Compiler compatibility — no side effects during render, no unstable patterns
 - Babel pipeline correctly chaining `next/babel` → `@lingui/babel-plugin-lingui-macro` → `babel-plugin-react-compiler`
-- No redirect loops between middleware, server-side `localeRedirect`, and direct `redirect()` calls
+- No redirect loops between proxy, server-side `localeRedirect`, and direct `redirect()` calls
 
 ---
 
@@ -1286,7 +1298,7 @@ No `sitemap.ts` or `sitemap.xml` exists. For SEO, a sitemap that lists all local
 
 ### Cookie validation — Safe
 
-The `NEXT_LOCALE` cookie value is checked against the locale whitelist in `getRequestLocale()` (`src/middleware.ts`, line 72). An attacker setting `NEXT_LOCALE=../../etc/passwd` gets no match and falls through to `Accept-Language` negotiation. The cookie value never reaches a filesystem path or dynamic import without passing the whitelist check first.
+The `NEXT_LOCALE` cookie value is checked against the locale whitelist in `getRequestLocale()` (`src/proxy.ts`, line 72). An attacker setting `NEXT_LOCALE=../../etc/passwd` gets no match and falls through to `Accept-Language` negotiation. The cookie value never reaches a filesystem path or dynamic import without passing the whitelist check first.
 
 ### Dynamic import path injection — Safe
 
@@ -1298,19 +1310,19 @@ The `NEXT_LOCALE` cookie value is checked against the locale whitelist in `getRe
 
 ### Open redirect via locale prefix stripping — Safe
 
-The middleware's locale-like prefix regex (`/^[a-z]{2}(-[a-z]{2})?$/i`) only matches two-letter codes with an optional region suffix. It strips the prefix and redirects to a same-origin URL constructed via `request.nextUrl` — which preserves the host. There is no vector for open redirect or path traversal.
+The proxy's locale-like prefix regex (`/^[a-z]{2}(-[a-z]{2})?$/i`) only matches two-letter codes with an optional region suffix. It strips the prefix and redirects to a same-origin URL constructed via `request.nextUrl` — which preserves the host. There is no vector for open redirect or path traversal.
 
 ### x-locale header spoofing — No impact
 
-The middleware overwrites the `x-locale` header for valid-locale paths (line 27). No layout or page reads this header — the `[lang]` layout uses the URL parameter directly. Spoofing `x-locale` in an inbound request has zero effect on rendered output.
+The proxy overwrites the `x-locale` header for valid-locale paths (line 27). No layout or page reads this header — the `[lang]` layout uses the URL parameter directly. Spoofing `x-locale` in an inbound request has zero effect on rendered output.
 
 ### Unsupported locale in URL — Safe
 
-Triple-layer validation: middleware redirects to a known locale, the layout's `isLocale()` + `notFound()` catches any value that bypasses middleware, and the catalog loader falls back to `"en"` as final defense-in-depth. There is no code path where an unsupported locale reaches a `<Trans>` component or an unvalidated catalog import.
+Triple-layer validation: the proxy redirects to a known locale, the layout's `isLocale()` + `notFound()` catches any value that bypasses the proxy, and the catalog loader falls back to `"en"` as final defense-in-depth. There is no code path where an unsupported locale reaches a `<Trans>` component or an unvalidated catalog import.
 
-### Redirect loop between middleware, localeRedirect, and go-home page — Safe
+### Redirect loop between proxy, localeRedirect, and go-home page — Safe
 
-`localeRedirect(lang, path)` produces URLs like `/${lang}${path}` which always have a valid locale prefix. The `go-home` page produces `/${lang}` directly. The middleware recognizes valid locale prefixes and passes them through without redirecting. No loop is possible between any combination of these redirect sources.
+`localeRedirect(lang, path)` produces URLs like `/${lang}${path}` which always have a valid locale prefix. The `go-home` page produces `/${lang}` directly. The proxy recognizes valid locale prefixes and passes them through without redirecting. No loop is possible between any combination of these redirect sources.
 
 ### Query parameter preservation during language switch — Safe
 
@@ -1355,7 +1367,7 @@ lingui-demo/
 ├── scripts/
 │   └── generate-routes.mts           ← scans src/app/[lang]/ for page.tsx → generates src/lib/routes.ts
 └── src/
-    ├── middleware.ts                  ← locale redirect, cookie persistence, Accept-Language fallback
+    ├── proxy.ts                       ← locale redirect, cookie persistence, Accept-Language fallback
     ├── app/
     │   ├── layout.tsx                ← root: metadata + globals.css only, no <html>/<body>
     │   ├── globals.css               ← Tailwind v4 imports
@@ -1419,7 +1431,7 @@ Move `LOCALE_LABELS` into `lingui.config.ts` or use `Intl.DisplayNames` to elimi
 
 **The codebase is production-ready for Lingui-based localization.**
 
-The architecture correctly implements every critical concern: locale-segmented routing with `[lang]` and `generateStaticParams` for full SSG across 4 locales, accurate `<html lang={lang}>` per locale without dynamic rendering, triple-layer locale validation (middleware → layout `isLocale()` + `notFound()` → catalog loader fallback), lazy-loaded catalogs with immutable data cached at module level and mutable `I18n` instances scoped per-request via `React.cache`, `server-only` guard preventing catalog code from leaking into client bundles, proper Lingui RSC architecture with `setI18n` in every Server Component scope and serializable-only props crossing the server/client boundary, `I18nProvider` with `useMemo`-based instance reconstruction on locale change, no module-level translation freezing, a complete set of typed locale-aware navigation primitives using `AppRoute` union at the API surface and narrowly-scoped `as Route` casts for Next.js compatibility (server redirect, client hooks, declarative links), cookie-based locale persistence with `Accept-Language` fallback, query/hash-preserving language switching via navigation (not runtime swap), server-only redirect pages, safe input validation at every layer, React Compiler compatibility with no side effects during render, and a Babel pipeline correctly chaining Lingui macro transformation with React Compiler optimization.
+The architecture correctly implements every critical concern: locale-segmented routing with `[lang]` and `generateStaticParams` for full SSG across 4 locales, accurate `<html lang={lang}>` per locale without dynamic rendering, triple-layer locale validation (proxy → layout `isLocale()` + `notFound()` → catalog loader fallback), lazy-loaded catalogs with immutable data cached at module level and mutable `I18n` instances scoped per-request via `React.cache`, `server-only` guard preventing catalog code from leaking into client bundles, proper Lingui RSC architecture with `setI18n` in every Server Component scope and serializable-only props crossing the server/client boundary, `I18nProvider` with `useMemo`-based instance reconstruction on locale change, no module-level translation freezing, a complete set of typed locale-aware navigation primitives using `AppRoute` union at the API surface and narrowly-scoped `as Route` casts for Next.js compatibility (server redirect, client hooks, declarative links), cookie-based locale persistence with `Accept-Language` fallback, query/hash-preserving language switching via navigation (not runtime swap), server-only redirect pages, safe input validation at every layer, React Compiler compatibility with no side effects during render, and a Babel pipeline correctly chaining Lingui macro transformation with React Compiler optimization.
 
 Remaining items are low-to-medium severity enhancements that improve SEO, maintainability, and developer experience but do not block production deployment:
 
