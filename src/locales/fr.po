@@ -14,7 +14,7 @@ msgstr ""
 "Plural-Forms: \n"
 
 #: src/app/[lang]/hellotesting/page.tsx:28
-#: src/app/[lang]/page.tsx:26
+#: src/app/[lang]/page.tsx:31
 msgid "Active locale:"
 msgstr "Langue active :"
 
@@ -30,7 +30,7 @@ msgstr "Une erreur inattendue s'est produite."
 msgid "Back to Home"
 msgstr "Retour à l'accueil"
 
-#: src/app/[lang]/page.tsx:34
+#: src/app/[lang]/page.tsx:39
 msgid "Go to Hello Testing"
 msgstr "Aller à Hello Testing"
 
@@ -61,6 +61,10 @@ msgstr "Une erreur est survenue"
 #: src/components/AdditionalTextToggle.tsx:31
 msgid "This is additional text."
 msgstr "Ceci est du texte supplémentaire."
+
+#: src/app/[lang]/page.tsx:26
+msgid "This text also gets translated."
+msgstr "Ce texte est aussi traduit."
 
 #: src/app/[lang]/hellotesting/page.tsx:23
 #: src/app/[lang]/page.tsx:21

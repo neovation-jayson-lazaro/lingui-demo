@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -6,13 +7,28 @@ export const metadata: Metadata = {
   description: "Next.js App Router with LinguiJS internationalization",
 };
 
-// Root layout is a pass-through — it owns global CSS and metadata only.
-// The <html> and <body> tags live in src/app/[lang]/layout.tsx where the
-// locale param is available, allowing <html lang={lang}> to be set per locale.
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return children;
+  return (
+    <html lang="en">
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        {children}
+      </body>
+    </html>
+  );
 }

@@ -7,7 +7,7 @@
 
 import { I18nProvider } from "@lingui/react";
 import { type Messages, setupI18n } from "@lingui/core";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 
 export function LinguiClientProvider({
   children,
@@ -25,8 +25,9 @@ export function LinguiClientProvider({
     });
   }, [initialLocale, initialMessages]);
 
-  // I18nProvider makes the i18n instance available via React context to all
-  // client components in the tree. <Trans> in client components reads from
-  // this context to resolve translations.
+  useEffect(() => {
+    document.documentElement.lang = initialLocale;
+  }, [initialLocale]);
+
   return <I18nProvider i18n={i18n}>{children}</I18nProvider>;
 }

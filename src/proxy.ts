@@ -40,19 +40,11 @@ export function proxy(request: NextRequest) {
     return response;
   }
 
-  // No valid locale prefix found — need to redirect.
-  // Strip an unknown locale-like prefix (e.g. "/de" or "/de/about") so
-  // we don't end up with nested junk like "/en/de/about".
-  const segments = pathname.split("/");
-  const firstPathSegment = segments[1];
-  const isLocaleFormat = /^[a-z]{2}(-[a-z]{2})?$/i.test(firstPathSegment ?? "");
-  const pathWithoutLocalePrefix = isLocaleFormat
-    ? "/" + segments.slice(2).join("/")
-    : pathname;
-
-  // Resolve the user's preferred locale and redirect
+  // No valid locale prefix found — prepend the resolved locale and redirect.
+  // The original pathname is preserved so invalid paths like /xyz/hellotesting
+  // become /fr/xyz/hellotesting and fall through to a localized 404.
   const locale = getRequestLocale(request);
-  request.nextUrl.pathname = `/${locale}${pathWithoutLocalePrefix === "/" ? "" : pathWithoutLocalePrefix}`;
+  request.nextUrl.pathname = `/${locale}${pathname}`;
 
   const response = NextResponse.redirect(request.nextUrl);
   response.cookies.set(LOCALE_COOKIE, locale, {

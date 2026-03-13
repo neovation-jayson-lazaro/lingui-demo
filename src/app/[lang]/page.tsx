@@ -22,6 +22,11 @@ export default async function Home({ params }: Props) {
             This text is translated using LinguiJS in the Next.js App Router.
           </Trans>
         </p>
+        <p className="text-lg text-zinc-600 dark:text-zinc-400">
+          <Trans>
+            This text also gets translated.
+          </Trans>
+        </p>
         <p className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-500">
           <Trans>Active locale:</Trans>{" "}
           <LanguageSwitcher />
