@@ -1,0 +1,1 @@
+/*eslint-disable*/module.exports={messages:JSON.parse("{\"BGOin/\":[\"Este texto está traducido usando LinguiJS en el Next.js App Router.\"],\"TjGEp+\":[\"Este texto centrado también se traduce.\"],\"i0qMbr\":[\"Inicio\"],\"wu7Iln\":[\"Ir a ejemplos de enrutamiento\"]}")};

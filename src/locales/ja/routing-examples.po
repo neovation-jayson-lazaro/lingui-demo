@@ -1,0 +1,82 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-03-17 10:31-0500\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: ja\n"
+
+#: src/app/[lang]/routing-examples/page.tsx:78
+msgid "API Route Localization"
+msgstr "APIルートのローカライズ"
+
+#: src/app/[lang]/routing-examples/page.tsx:54
+msgid "Dynamic Slug Route"
+msgstr "動的スラッグルート"
+
+#: src/app/[lang]/routing-examples/ApiGreeting.tsx:35
+msgid "Fetch"
+msgstr "取得"
+
+#. js-lingui-explicit-id
+#: src/app/api/greeting/route.ts:11
+msgid "apiGreeting"
+msgstr "取得が完了しました！"
+
+#: src/app/[lang]/routing-examples/slow-page/page.tsx:27
+msgid "Go to Routing Examples"
+msgstr "ルーティングの例へ"
+
+#: src/app/[lang]/routing-examples/page.tsx:60
+msgid "Link to /users"
+msgstr "/usersへのリンク"
+
+#: src/app/[lang]/routing-examples/ApiGreeting.tsx:35
+#: src/app/[lang]/routing-examples/slow-page/loading.tsx:11
+msgid "Loading..."
+msgstr "読み込み中..."
+
+#: src/app/[lang]/routing-examples/NavigateHomeButton.tsx:14
+msgid "Navigate to Home"
+msgstr "ホームへ移動"
+
+#: src/app/[lang]/routing-examples/page.tsx:72
+msgid "Navigate to Page"
+msgstr "ページへ移動"
+
+#: src/app/[lang]/routing-examples/page.tsx:23
+msgid "Navigation Link"
+msgstr "ナビゲーションリンク"
+
+#: src/app/[lang]/routing-examples/slow-page/page.tsx:18
+msgid "Page"
+msgstr "ページ"
+
+#: src/app/[lang]/routing-examples/page.tsx:47
+msgid "Programmatic Client-Side Navigation"
+msgstr "プログラムによるクライアント側ナビゲーション"
+
+#: src/app/[lang]/routing-examples/page.tsx:41
+msgid "Redirect Home"
+msgstr "ホームへリダイレクト"
+
+#: src/app/[lang]/routing-examples/page.tsx:35
+msgid "Redirect to Home"
+msgstr "ホームへのリダイレクト"
+
+#: src/app/[lang]/routing-examples/page.tsx:29
+msgid "Return to Home"
+msgstr "ホームに戻る"
+
+#: src/app/[lang]/routing-examples/page.tsx:18
+msgid "Routing Examples"
+msgstr "ルーティングの例"
+
+#: src/app/[lang]/routing-examples/page.tsx:66
+msgid "Streaming / Suspense with Loading"
+msgstr "ストリーミング / Suspenseとローディング"
+
+#: src/app/[lang]/routing-examples/slow-page/page.tsx:21
+msgid "This content was loaded after a 3-second delay."
+msgstr "このコンテンツは3秒の遅延後に読み込まれました。"

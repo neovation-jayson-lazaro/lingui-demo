@@ -1,0 +1,29 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-03-17 10:31-0500\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: ja\n"
+
+#. js-lingui-explicit-id
+#: src/app/[lang]/select-variation/RolePicker.tsx:26
+msgid "permissionMessage"
+msgstr "{role, select, user {自分のコースを表示} admin {すべてのコースを表示} other {自分のコースを表示}}"
+
+#: src/app/[lang]/select-variation/RolePicker.tsx:22
+msgid "Admin"
+msgstr "管理者"
+
+#: src/app/[lang]/select-variation/RolePicker.tsx:14
+msgid "Select permission level:"
+msgstr "権限レベルを選択："
+
+#: src/app/[lang]/select-variation/page.tsx:17
+msgid "Select Variation Example"
+msgstr "選択バリエーションの例"
+
+#: src/app/[lang]/select-variation/RolePicker.tsx:21
+msgid "User"
+msgstr "ユーザー"

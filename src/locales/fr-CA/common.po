@@ -1,0 +1,70 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-03-16 16:34-0500\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: fr-CA\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Plural-Forms: \n"
+
+#: src/components/PageHeader.tsx:12
+msgid "Active locale:"
+msgstr "Langue active :"
+
+#: src/components/AdditionalTextToggle.tsx:12
+msgid "Additional text:"
+msgstr "Texte supplémentaire :"
+
+#: src/app/[lang]/error.tsx:19
+msgid "An unexpected error occurred."
+msgstr "Une erreur inattendue s'est produite."
+
+#: src/app/[lang]/not-found.tsx:21
+msgid "Back to Home"
+msgstr "Retour à l'accueil"
+
+#: src/components/SideNav.tsx:10
+msgid "Home"
+msgstr "Accueil"
+
+#: src/app/[lang]/not-found.tsx:15
+msgid "Page not found"
+msgstr "Page introuvable"
+
+#: src/components/SideNav.tsx:13
+msgid "Parameterized String Examples"
+msgstr "Exemples de chaînes paramétrées"
+
+#: src/components/SideNav.tsx:11
+msgid "Pluralization Example"
+msgstr "Exemple de pluralisation"
+
+#: src/components/SideNav.tsx:14
+msgid "Routing Examples"
+msgstr "Exemples de routage"
+
+#: src/components/SideNav.tsx:12
+msgid "Select Variation Example"
+msgstr "Exemple de variation select"
+
+#: src/app/[lang]/error.tsx:16
+msgid "Something went wrong"
+msgstr "Quelque chose a mal tourné"
+
+#: src/components/AdditionalTextToggle.tsx:31
+msgid "This is additional text."
+msgstr "Ceci est du texte supplémentaire."
+
+#: src/app/[lang]/error.tsx:25
+msgid "Try again"
+msgstr "Réessayer"
+
+#: src/components/SideNav.tsx:15
+msgid "Users"
+msgstr "Utilisateurs"

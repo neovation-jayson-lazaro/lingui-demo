@@ -1,0 +1,1 @@
+/*eslint-disable*/import type{Messages}from"@lingui/core";export const messages=JSON.parse("{\"LsL/e8\":[\"Wählen Sie eine Anzahl von Kursen:\"],\"UG9j1y\":[\"Pluralisierungsbeispiel\"],\"courseCount\":[[\"count\",\"plural\",{\"0\":[\"Es gibt keine Kurse.\"],\"one\":[\"Es gibt \",\"#\",\" Kurs.\"],\"other\":[\"Es gibt \",\"#\",\" Kurse.\"]}]]}")as Messages;

@@ -1,0 +1,64 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-03-17 10:31-0500\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: ja\n"
+
+#: src/components/PageHeader.tsx:12
+msgid "Active locale:"
+msgstr "現在のロケール："
+
+#: src/components/AdditionalTextToggle.tsx:12
+msgid "Additional text:"
+msgstr "追加テキスト："
+
+#: src/app/[lang]/error.tsx:19
+msgid "An unexpected error occurred."
+msgstr "予期しないエラーが発生しました。"
+
+#: src/app/[lang]/not-found.tsx:21
+msgid "Back to Home"
+msgstr "ホームに戻る"
+
+#: src/components/SideNav.tsx:10
+msgid "Home"
+msgstr "ホーム"
+
+#: src/app/[lang]/not-found.tsx:15
+msgid "Page not found"
+msgstr "ページが見つかりません"
+
+#: src/components/SideNav.tsx:13
+msgid "Parameterized String Examples"
+msgstr "パラメータ付き文字列の例"
+
+#: src/components/SideNav.tsx:11
+msgid "Pluralization Example"
+msgstr "複数形の例"
+
+#: src/components/SideNav.tsx:14
+msgid "Routing Examples"
+msgstr "ルーティングの例"
+
+#: src/components/SideNav.tsx:12
+msgid "Select Variation Example"
+msgstr "選択バリエーションの例"
+
+#: src/app/[lang]/error.tsx:16
+msgid "Something went wrong"
+msgstr "問題が発生しました"
+
+#: src/components/AdditionalTextToggle.tsx:31
+msgid "This is additional text."
+msgstr "これは追加テキストです。"
+
+#: src/app/[lang]/error.tsx:25
+msgid "Try again"
+msgstr "もう一度試す"
+
+#: src/components/SideNav.tsx:15
+msgid "Users"
+msgstr "ユーザー"

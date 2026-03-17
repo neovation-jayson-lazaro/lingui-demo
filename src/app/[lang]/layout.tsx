@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import { setI18n } from "@lingui/react/server";
 import { getI18nInstance, isLocale } from "@/lib/i18n";
 import { LinguiClientProvider } from "@/components/LinguiClientProvider";
-import { locales } from "../../../lingui.config";
+import { SideNav } from "@/components/SideNav";
+import { PageHeader } from "@/components/PageHeader";
+import { locales, catalogNames } from "../../../lingui.config";
 
 export function generateStaticParams() {
   return locales.map((lang) => ({ lang }));
@@ -24,12 +26,16 @@ export default async function LangLayout({ params, children }: Props) {
 
   if (!isLocale(lang)) notFound();
 
-  const i18n = await getI18nInstance(lang);
+  const i18n = await getI18nInstance(lang, [...catalogNames]);
   setI18n(i18n);
 
   return (
     <LinguiClientProvider initialLocale={lang} initialMessages={i18n.messages}>
-      {children}
+      <SideNav />
+      <div className="flex min-h-screen flex-col bg-zinc-50 font-sans dark:bg-black">
+        <PageHeader />
+        {children}
+      </div>
     </LinguiClientProvider>
   );
 }

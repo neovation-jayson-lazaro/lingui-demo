@@ -1,0 +1,1 @@
+/*eslint-disable*/module.exports={messages:JSON.parse("{\"7PzzBU\":[\"Benutzer\"],\"HwWQks\":[\"Berechtigungsstufe auswählen:\"],\"U3pytU\":[\"Administrator\"],\"permissionMessage\":[[\"role\",\"select\",{\"user\":[\"Ihre Kurse anzeigen\"],\"admin\":[\"Alle Kurse anzeigen\"],\"other\":[\"Ihre Kurse anzeigen\"]}]],\"v1Wfnh\":[\"Select-Variationsbeispiel\"]}")};

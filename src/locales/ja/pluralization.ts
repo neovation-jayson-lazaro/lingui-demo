@@ -1,0 +1,1 @@
+/*eslint-disable*/import type{Messages}from"@lingui/core";export const messages=JSON.parse("{\"LsL/e8\":[\"コース数を選択：\"],\"UG9j1y\":[\"複数形の例\"],\"courseCount\":[[\"count\",\"plural\",{\"0\":[\"コースはありません\"],\"other\":[\"#\",\" 件のコースがあります\"]}]]}")as Messages;

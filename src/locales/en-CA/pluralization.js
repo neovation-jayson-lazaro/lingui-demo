@@ -1,0 +1,1 @@
+/*eslint-disable*/module.exports={messages:JSON.parse("{\"LsL/e8\":[\"Select a number of courses:\"],\"UG9j1y\":[\"Pluralization Example\"],\"courseCount\":[[\"count\",\"plural\",{\"0\":[\"There are no courses\"],\"one\":[\"There is \",\"#\",\" course\"],\"other\":[\"There are \",\"#\",\" courses\"]}]]}")};

@@ -1,0 +1,44 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-03-17 10:31-0500\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: ja\n"
+
+#: src/app/[lang]/parameterized-strings/NameForm.tsx:43
+msgid "Add name:"
+msgstr "名前を追加："
+
+#: src/app/[lang]/parameterized-strings/NameForm.tsx:65
+msgid "Combined ICU MessageFormat string"
+msgstr "結合されたICU MessageFormat文字列"
+
+#: src/app/[lang]/parameterized-strings/NameForm.tsx:59
+msgid "Hello, my name is {placeholder}"
+msgstr "こんにちは、私の名前は{placeholder}です"
+
+#: src/app/[lang]/parameterized-strings/NameForm.tsx:68
+msgid "Hello, my name is {placeholder}. I am using {APP_NAME}."
+msgstr "こんにちは、私の名前は{placeholder}です。{APP_NAME}を使用しています。"
+
+#: src/app/[lang]/parameterized-strings/page.tsx:29
+msgid "I am using {APP_NAME}"
+msgstr "{APP_NAME}を使用しています"
+
+#: src/app/[lang]/parameterized-strings/page.tsx:19
+msgid "Parameterized String Examples"
+msgstr "パラメータ付き文字列の例"
+
+#: src/app/[lang]/parameterized-strings/NameForm.tsx:39
+msgid "String with Dynamic Content"
+msgstr "動的コンテンツを含む文字列"
+
+#: src/app/[lang]/parameterized-strings/page.tsx:26
+msgid "String with Placeholder"
+msgstr "プレースホルダー付き文字列"
+
+#: src/app/[lang]/parameterized-strings/NameForm.tsx:55
+msgid "Submit"
+msgstr "送信"

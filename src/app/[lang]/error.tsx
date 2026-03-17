@@ -1,6 +1,7 @@
 "use client";
 
 import { Trans } from "@lingui/react/macro";
+import styles from "@/styles/page-content.module.css";
 
 export default function Error({
   reset,
@@ -9,11 +10,11 @@ export default function Error({
   reset: () => void;
 }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-col items-center gap-6 p-16 text-center">
-        <h1 className="text-4xl font-bold text-zinc-900 dark:text-zinc-50">
+    <div className={styles.wrapper}>
+      <main className={styles.content}>
+        <h2 className="text-4xl font-bold text-zinc-900 dark:text-zinc-50">
           <Trans>Something went wrong</Trans>
-        </h1>
+        </h2>
         <p className="text-lg text-zinc-600 dark:text-zinc-400">
           <Trans>An unexpected error occurred.</Trans>
         </p>

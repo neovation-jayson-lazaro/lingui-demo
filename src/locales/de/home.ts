@@ -1,0 +1,1 @@
+/*eslint-disable*/import type{Messages}from"@lingui/core";export const messages=JSON.parse("{\"BGOin/\":[\"Dieser Text wird mit LinguiJS im Next.js App Router übersetzt.\"],\"TjGEp+\":[\"Dieser zentrierte Text wird ebenfalls übersetzt.\"],\"i0qMbr\":[\"Startseite\"],\"wu7Iln\":[\"Zu Routing-Beispielen gehen\"]}")as Messages;

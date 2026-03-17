@@ -1,0 +1,1 @@
+/*eslint-disable*/import type{Messages}from"@lingui/core";export const messages=JSON.parse("{\"OYOJop\":[\"Return to Home\"],\"Sxm8rQ\":[\"ユーザー\"],\"UVRlfm\":[\"名前: \",[\"0\"]],\"W3TNvn\":[\"ユーザー一覧に戻る\"],\"Yb82LN\":[\"ID: \",[\"0\"]],\"anfIXl\":[\"ユーザー詳細\"],\"cGkEcl\":[\"スラッグ: \",[\"0\"]],\"phVUB2\":[\"ユーザーを選択して詳細を表示します。\"],\"wu7Iln\":[\"ルーティングの例へ\"]}")as Messages;

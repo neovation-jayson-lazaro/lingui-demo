@@ -1,0 +1,1 @@
+/*eslint-disable*/import type{Messages}from"@lingui/core";export const messages=JSON.parse("{\"LsL/e8\":[\"Sélectionnez un nombre de cours :\"],\"UG9j1y\":[\"Exemple de pluralisation\"],\"courseCount\":[[\"count\",\"plural\",{\"0\":[\"Il n'y a aucun cours\"],\"one\":[\"Il y a \",\"#\",\" cours\"],\"other\":[\"Il y a \",\"#\",\" cours\"]}]]}")as Messages;

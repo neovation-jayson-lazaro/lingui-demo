@@ -1,0 +1,43 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-03-17 10:31-0500\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: ja\n"
+
+#: src/app/[lang]/users/[slug]/page.tsx:40
+msgid "Back to Users"
+msgstr "ユーザー一覧に戻る"
+
+#: src/app/[lang]/users/page.tsx:41
+msgid "Go to Routing Examples"
+msgstr "ルーティングの例へ"
+
+#. placeholder {0}: user.id
+#: src/app/[lang]/users/[slug]/page.tsx:30
+msgid "ID: {0}"
+msgstr "ID: {0}"
+
+#. placeholder {0}: user.name
+#: src/app/[lang]/users/[slug]/page.tsx:27
+msgid "Name: {0}"
+msgstr "名前: {0}"
+
+#: src/app/[lang]/users/page.tsx:24
+msgid "Select a user to view their details."
+msgstr "ユーザーを選択して詳細を表示します。"
+
+#. placeholder {0}: user.slug
+#: src/app/[lang]/users/[slug]/page.tsx:33
+msgid "Slug: {0}"
+msgstr "スラッグ: {0}"
+
+#: src/app/[lang]/users/[slug]/page.tsx:23
+msgid "User Details"
+msgstr "ユーザー詳細"
+
+#: src/app/[lang]/users/page.tsx:21
+msgid "Users"
+msgstr "ユーザー"

@@ -1,0 +1,1 @@
+/*eslint-disable*/import type{Messages}from"@lingui/core";export const messages=JSON.parse("{\"7PzzBU\":[\"ユーザー\"],\"HwWQks\":[\"権限レベルを選択：\"],\"U3pytU\":[\"管理者\"],\"permissionMessage\":[[\"role\",\"select\",{\"user\":[\"自分のコースを表示\"],\"admin\":[\"すべてのコースを表示\"],\"other\":[\"自分のコースを表示\"]}]],\"v1Wfnh\":[\"選択バリエーションの例\"]}")as Messages;
