@@ -13,18 +13,26 @@ msgstr ""
 "Language-Team: \n"
 "Plural-Forms: \n"
 
-#: src/app/[lang]/page.tsx:34
+#: src/app/[lang]/page.tsx:44
 msgid "Go to Routing Examples"
 msgstr "Go to Routing Examples"
 
-#: src/app/[lang]/page.tsx:18
+#: src/app/[lang]/page.tsx:23
 msgid "Home"
 msgstr "Home"
 
 #: src/app/[lang]/page.tsx:26
-msgid "This centered text also gets translated."
-msgstr "This centred text also gets translated."
+#~ msgid "This centered text also gets translated."
+#~ msgstr "This centred text also gets translated."
 
-#: src/app/[lang]/page.tsx:21
+#: src/app/[lang]/page.tsx:31
+msgid "This centered text also gets translated. You are visitor {visitorCount}!"
+msgstr "This centred text also gets translated. You are visitor {visitorCount}!"
+
+#: src/app/[lang]/page.tsx:26
 msgid "This text is translated using LinguiJS in the Next.js App Router."
 msgstr "This text is translated using LinguiJS in the Next.js App Router."
+
+#: src/app/[lang]/page.tsx:36
+msgid "Today's date and time is {formattedDate} {formattedTime}"
+msgstr "Today's date and time is {formattedDate} {formattedTime}"

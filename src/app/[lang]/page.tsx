@@ -9,7 +9,13 @@ type Props = {
 };
 
 export default async function Home({ params }: Props) {
-  await activateI18n((await params).lang, ["common", "home"]);
+  const { lang } = await params;
+  const { i18n } = await activateI18n(lang, ["common", "home"]);
+
+  const now = new Date();
+  const visitorCount = i18n.number(1_000_000);
+  const formattedDate = i18n.date(now, { dateStyle: "long" });
+  const formattedTime = i18n.date(now, { timeStyle: "short" });
 
   return (
     <div className={styles.wrapper}>
@@ -24,7 +30,12 @@ export default async function Home({ params }: Props) {
         </p>
         <p className="text-lg text-zinc-600 dark:text-zinc-400">
           <Trans>
-            This centered text also gets translated.
+            This centered text also gets translated. You are visitor {visitorCount}!
+          </Trans>
+        </p>
+        <p className="text-lg text-zinc-600 dark:text-zinc-400" suppressHydrationWarning>
+          <Trans>
+            Today&apos;s date and time is {formattedDate} {formattedTime}
           </Trans>
         </p>
         <LocaleLink

@@ -83,6 +83,49 @@ Embed variables directly inside `<Trans>`. Lingui extracts them as `{0}`, `{1}`,
 <Trans>Hello, my name is {name}</Trans>
 ```
 
+### `i18n.number()` / `i18n.date()` — locale-aware formatting
+
+Format numbers, dates, and times according to the active locale using `Intl.NumberFormat` and `Intl.DateTimeFormat` under the hood. The `i18n` instance is returned by `activateI18n` on the server. Pass the formatted values as variables into `<Trans>`.
+
+```tsx
+import { Trans } from "@lingui/react/macro";
+import { activateI18n } from "@/lib/i18n";
+
+export default async function Home({ params }: Props) {
+  const { lang } = await params;
+  const { i18n } = await activateI18n(lang, ["common", "home"]);
+
+  const visitorCount = i18n.number(1_000_000);
+  const formattedDate = i18n.date(new Date(), { dateStyle: "long" });
+  const formattedTime = i18n.date(new Date(), { timeStyle: "short" });
+
+  return (
+    <>
+      <p><Trans>You are visitor {visitorCount}!</Trans></p>
+      <p><Trans>Today's date and time is {formattedDate} {formattedTime}</Trans></p>
+    </>
+  );
+}
+```
+
+Output varies by locale — e.g. `1,000,000` in `en`, `1 000 000` in `fr`, `1.000.000` in `de`. Date and time formatting follows each locale's conventions (month/day order, 12h vs 24h clock, etc.).
+
+### List formatting — using `Intl.ListFormat` with Lingui
+
+Lingui does not provide a built-in list formatter. Use the browser's `Intl.ListFormat` API directly with the active locale. Since `activateI18n` returns the locale, you can pass it straight to `Intl.ListFormat`.
+
+```tsx
+const { lang } = await params;
+const { i18n } = await activateI18n(lang, ["common", "home"]);
+
+const items = ["HTML", "CSS", "JavaScript"];
+const formattedList = new Intl.ListFormat(lang, { type: "conjunction" }).format(items);
+
+<Trans>Supported technologies: {formattedList}</Trans>
+```
+
+Output varies by locale — e.g. `HTML, CSS, and JavaScript` in `en`, `HTML, CSS et JavaScript` in `fr`, `HTML, CSS und JavaScript` in `de`, `HTML、CSS、JavaScript` in `ja`.
+
 ### `<Plural>` — pluralization via ICU format
 
 Use explicit message IDs with ICU `{count, plural, ...}` syntax in `.po` files for full plural rule control.

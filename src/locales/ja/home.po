@@ -6,19 +6,33 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: @lingui/cli\n"
 "Language: ja\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Plural-Forms: \n"
 
-#: src/app/[lang]/page.tsx:34
+#: src/app/[lang]/page.tsx:44
 msgid "Go to Routing Examples"
 msgstr "ルーティングの例へ"
 
-#: src/app/[lang]/page.tsx:18
+#: src/app/[lang]/page.tsx:23
 msgid "Home"
 msgstr "ホーム"
 
 #: src/app/[lang]/page.tsx:26
-msgid "This centered text also gets translated."
-msgstr "この中央揃えのテキストも翻訳されます。"
+#~ msgid "This centered text also gets translated."
+#~ msgstr "この中央揃えのテキストも翻訳されます。"
 
-#: src/app/[lang]/page.tsx:21
+#: src/app/[lang]/page.tsx:31
+msgid "This centered text also gets translated. You are visitor {visitorCount}!"
+msgstr "この中央揃えのテキストも翻訳されます。あなたは {visitorCount} 番目の訪問者です！"
+
+#: src/app/[lang]/page.tsx:26
 msgid "This text is translated using LinguiJS in the Next.js App Router."
 msgstr "このテキストはNext.js App RouterでLinguiJSを使用して翻訳されています。"
+
+#: src/app/[lang]/page.tsx:36
+msgid "Today's date and time is {formattedDate} {formattedTime}"
+msgstr "今日の日付と時刻は {formattedDate} {formattedTime} です"
